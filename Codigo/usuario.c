@@ -8,10 +8,10 @@
 #include <string.h>
 #include "comun.h"
 
-void realizar_deposito(Usuario usuario);
-void realizar_retiro(Usuario usuario);
-void realizar_transferencia(Usuario usuario);
-void consultar_saldo(Usuario usuario);
+void* realizar_deposito(void* usuario);
+void* realizar_retiro(void* usuario);
+void* realizar_transferencia(void* usuario);
+void* consultar_saldo(void* usuario);
 Usuario AsignarUsuario(int NumeroCuenta);
 
 sem_t *semaforo;
@@ -21,10 +21,13 @@ int main(int argc, char* argv[]){
     semaforo = sem_open("/cuentas_sem", 0);
 
     int numero_cuenta = atoi(argv[1]); //guardo ncuenta para operaciones
+    Config configuracion = leer_configuracion("../Archivos_datos/config.txt");
 
     pthread_t thread_deposito, thread_retiro, thread_transferencia, thread_saldo;
 
-    Usuario usuario = AsignarUsuario(numero_cuenta);
+    Usuario usuario;
+    
+    usuario = AsignarUsuario(numero_cuenta);
 
     int opcion;
     while(1){
@@ -41,12 +44,12 @@ int main(int argc, char* argv[]){
                 pthread_create(&thread_retiro, NULL, realizar_retiro, &usuario);
                 pthread_join(thread_retiro, NULL);
                 break;
-            //case 3: 
-                //pthread_create(&thread_transferencia, NULL, realizar_transferencia, NULL); 
-                //pthread_join(thread_transferencia, NULL);
-                //break;
+            case 3: 
+                pthread_create(&thread_transferencia, NULL, realizar_transferencia, &usuario);
+                pthread_join(thread_transferencia, NULL);
+                break;
             case 4: 
-                consultar_saldo(usuario);
+                consultar_saldo(&usuario);
                 break;
             case 5: 
                 exit(0);
@@ -60,9 +63,13 @@ int main(int argc, char* argv[]){
 
 // Cambiar funcion
 
-void realizar_deposito(Usuario usuario){
+void* realizar_deposito(void* u){
 
-    //sem_wait(semaforo);
+    sem_wait(semaforo);
+
+    Usuario usuario;
+
+    usuario = *(Usuario*)u;
 
     Config configuracion = leer_configuracion("../Archivos_datos/config.txt");
 
@@ -97,12 +104,16 @@ void realizar_deposito(Usuario usuario){
     //actualizo el archivo con el nuevo saldo
     fseek(file, -strlen(linea_aux), SEEK_CUR);
     fprintf(file,"%d,%s,%f,%d\n",usuario.numero_cuenta, usuario.titular, usuario.saldo, usuario.num_transacciones);
-    //sem_post(semaforo);
+    sem_post(semaforo);
 }
 
-void realizar_retiro(Usuario usuario){
+void* realizar_retiro(void* u){
 
     sem_wait(semaforo);
+
+    Usuario usuario;
+
+    usuario = *(Usuario*)u;
 
     Config configuracion = leer_configuracion("../Archivos_datos/config.txt");
     float retiro;
@@ -146,9 +157,13 @@ void realizar_retiro(Usuario usuario){
 }
 
 
-void realizar_transferencia(Usuario usuario){
+void* realizar_transferencia(void* u){
 
     sem_wait(semaforo);
+
+    Usuario usuario;
+
+    usuario = *(Usuario*)u;
 
     Config configuracion = leer_configuracion("../Archivos_datos/config.txt");
 
@@ -207,16 +222,20 @@ void realizar_transferencia(Usuario usuario){
 } 
 
 
-void consultar_saldo(Usuario usuario){
+void* consultar_saldo(void* u){
 
     char confirmacion;
+
+    Usuario usuario;
+
+    usuario = *(Usuario*)u;
     
     printf("Tienes un saldo de %f\n", usuario.saldo);
     printf("¿Desea volver al menú?: ");
     scanf(" %c", &confirmacion);
     do {
         if(confirmacion == 's' || confirmacion == 'S'){
-            return;
+            break;
         } else if (confirmacion == 'N' || confirmacion == 'n'){
             
         }else {
@@ -233,8 +252,8 @@ Usuario AsignarUsuario(int NumeroCuenta) {
     Config configuracion = leer_configuracion("../Archivos_datos/config.txt");
 
     FILE *file = fopen(configuracion.archivo_cuentas, "r+");
-    Usuario usuario;
-    Usuario Aux;
+    Usuario usuario, Aux;
+
     while (fgets(linea, sizeof(linea), file)) {
         // Leemos todos los datos de la linea
         if (sscanf(linea, "%d,%49[^,],%f,%d", &usuario.numero_cuenta, usuario.titular, &usuario.saldo, &usuario.num_transacciones) == 4) {
