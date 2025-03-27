@@ -9,8 +9,7 @@
 #include <time.h>
 #include "comun.h"
 
-
-
+//prueba de ommit
 Config leer_configuracion(const char *ruta){
     FILE *archivo = fopen(ruta, "r");
 
