@@ -1,7 +1,7 @@
 #ifndef COMUN_H
 #define COMUN_H
 
-typedef struct {
+typedef struct Usuario{
     int numero_cuenta;
     char titular[50];
     float saldo;

@@ -8,13 +8,15 @@
 #include <string.h>
 #include "comun.h"
 
-void* realizar_deposito(void* usuario);
-void* realizar_retiro(void* usuario);
-void* realizar_transferencia(void* usuario);
-void* consultar_saldo(void* usuario);
+void* realizar_deposito(void* u);
+void* realizar_retiro(void* u);
+void* realizar_transferencia(void* u);
+void* consultar_saldo(void* u);
 Usuario AsignarUsuario(int NumeroCuenta);
 
 sem_t *semaforo;
+
+Usuario usuario;
 
 int main(int argc, char* argv[]){
 
@@ -24,8 +26,6 @@ int main(int argc, char* argv[]){
     Config configuracion = leer_configuracion("../Archivos_datos/config.txt");
 
     pthread_t thread_deposito, thread_retiro, thread_transferencia, thread_saldo;
-
-    Usuario usuario;
     
     usuario = AsignarUsuario(numero_cuenta);
 
@@ -156,7 +156,6 @@ void* realizar_retiro(void* u){
 
 }
 
-
 void* realizar_transferencia(void* u){
 
     sem_wait(semaforo);
@@ -221,7 +220,6 @@ void* realizar_transferencia(void* u){
     sem_post(semaforo);
 } 
 
-
 void* consultar_saldo(void* u){
 
     char confirmacion;
@@ -244,7 +242,6 @@ void* consultar_saldo(void* u){
     } while (confirmacion != 'S' && confirmacion != 's' && confirmacion != 'N' && confirmacion != 'n');
 }
 
-
 Usuario AsignarUsuario(int NumeroCuenta) {
 
     char linea[100];    
@@ -257,16 +254,12 @@ Usuario AsignarUsuario(int NumeroCuenta) {
     while (fgets(linea, sizeof(linea), file)) {
         // Leemos todos los datos de la linea
         if (sscanf(linea, "%d,%49[^,],%f,%d", &usuario.numero_cuenta, usuario.titular, &usuario.saldo, &usuario.num_transacciones) == 4) {
-            // Verificar si el nombre y la contraseña coinciden
+            // Verificar si numero cuenta coinciden
             if (usuario.numero_cuenta == NumeroCuenta) {
-                //Asigna al usuario auxiliar los parametros de la cuenta que quiere hacer operaciones
-                strcpy(Aux.titular, usuario.titular);
-                Aux.numero_cuenta = usuario.numero_cuenta;
-                Aux.saldo = usuario.saldo;
-                Aux.num_transacciones = usuario.num_transacciones;
                 fclose(file);
-                return Aux;
+                return usuario;
             }   
         }
-    }    
+    }   
+    fclose(file); 
 }

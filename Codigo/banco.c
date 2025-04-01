@@ -22,12 +22,15 @@ sem_t *semaforo;
 
 Config configuracion;
 
+Usuario usuario;
+
 int main(){
 
     semaforo = sem_open("/cuentas_sem", O_CREAT, 0644, 1);
 
     configuracion = leer_configuracion("../Archivos_datos/config.txt");
-    
+
+    menu(configuracion.archivo_cuentas);
 
     //*******************************inicializo el monitor***********************************
     int fd[2]; 
@@ -56,12 +59,10 @@ int main(){
     }
 
     AgregarLog("Se ha iniciado el menu");
-    menu(configuracion.archivo_cuentas);
-
+   
     return (0);
 
 }
-
 
 
 void menu(const char *nombreArchivo){
