@@ -77,6 +77,7 @@ int main(int argc, char* argv[]){
         }
     }   
     sem_close(semaforo);
+    hola carcola
 
     return 0;
 }
