@@ -142,7 +142,7 @@ void LoginCuenta(int numeroCuenta){
         char comando[250];
         snprintf(comando, sizeof(comando), "./usuario %d", numeroCuenta);
         execlp("gnome-terminal", "gnome-terminal", "--", "bash", "-c", comando, NULL);
-        perror("Error en exec"); 
+        perror("Error en exec");
         exit(1);
     }
     else {
