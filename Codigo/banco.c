@@ -87,8 +87,10 @@ void menu(const char *nombreArchivo){
                 AgregarLog("Se ha hecho login");
             }
             else {
+                system("clear");
                 AgregarLog("El usuario no existe");
-                printf("El usuario no existe");
+                printf("\nEl usuario no existe\n");
+                sleep(3);
             }
             menu(nombreArchivo);
             break;
@@ -138,8 +140,8 @@ void LoginCuenta(int numeroCuenta){
     else if (pid2 == 0) {
         sleep(1);
         char comando[250];
-        snprintf(comando, sizeof(comando), "./usuario '%d'", numeroCuenta);
-        execlp("gnome-terminal", "gnome-terminal", "--", "./usuario", comando, NULL);
+        snprintf(comando, sizeof(comando), "./usuario %d", numeroCuenta);
+        execlp("gnome-terminal", "gnome-terminal", "--", "bash", "-c", comando, NULL);
         perror("Error en exec"); 
         exit(1);
     }
@@ -188,7 +190,7 @@ bool VerificarCuenta(char nombre[], int numero, const char *nombreArchivo){
     FILE *file = fopen(nombreArchivo, "r");
     char linea[MAX_LINE_LENGTH];
     Usuario usuario;
-    while (fgets(linea, sizeof(linea), file)) {
+    while (fgets(linea, sizeof(linea), file) != NULL) {
         // Leemos todos los datos de la linea
         if (sscanf(linea, "%d,%49[^,],%f,%d", &usuario.numero_cuenta, usuario.titular, &usuario.saldo, &usuario.num_transacciones) == 4) {
             // Verificar si el nombre y la contraseña coinciden

@@ -22,7 +22,10 @@ int main(int argc, char* argv[]){
     semaforo = sem_open("/cuentas_sem", 0);
 
     int numero_cuenta = atoi(argv[1]); //guardo ncuenta para operaciones
-    printf("%d", numero_cuenta);
+
+    printf("%d\n", numero_cuenta);
+    sleep(3);
+    
     Config configuracion = leer_configuracion("../Archivos_datos/config.txt");
 
     pthread_t thread_deposito, thread_retiro, thread_transferencia, thread_saldo;
@@ -31,7 +34,7 @@ int main(int argc, char* argv[]){
 
     int opcion;
     while(1){
-        system("clear");
+
         printf("1. Depósito\n2. Retiro\n3. Transferencia\n4. Consultar saldo\n5. Salir\n");
         printf("Que operación desea relaizar: ");
         scanf("%d", &opcion);
@@ -267,20 +270,17 @@ Usuario AsignarUsuario(int NumeroCuenta) {
     Config configuracion = leer_configuracion("../Archivos_datos/config.txt");
 
     FILE *file = fopen(nombreArchivo, "r");
-    rewind(file);
     Usuario usuario;
 
-    while (fgets(linea, sizeof(linea), file)) {
+    while (fgets(linea, sizeof(linea), file) != NULL) {
         if (sscanf(linea, "%d,%49[^,],%f,%d", &usuario.numero_cuenta, usuario.titular, &usuario.saldo, &usuario.num_transacciones) == 4) {
             if (usuario.numero_cuenta == NumeroCuenta) {
                 printf("%f", usuario.saldo);
-                sleep(4);
                 fclose(file);
                 return usuario;
             }
         }
     } 
     fclose(file); 
-    printf("No se ha encontrado el usuario");
-    sleep(4);
+    printf("\nNo se ha encontrado el usuario\n");
 }
