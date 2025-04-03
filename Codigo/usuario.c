@@ -16,7 +16,6 @@ Usuario AsignarUsuario(int NumeroCuenta);
 
 sem_t *semaforo;
 
-Usuario usuario;
 
 int main(int argc, char* argv[]){
 
@@ -27,10 +26,11 @@ int main(int argc, char* argv[]){
 
     pthread_t thread_deposito, thread_retiro, thread_transferencia, thread_saldo;
     
-    usuario = AsignarUsuario(numero_cuenta);
+    Usuario usuario = AsignarUsuario(numero_cuenta);
 
     int opcion;
     while(1){
+        system("clear");
         printf("1. Depósito\n2. Retiro\n3. Transferencia\n4. Consultar saldo\n5. Salir\n");
         printf("Que operación desea relaizar: ");
         scanf("%d", &opcion);
@@ -45,8 +45,21 @@ int main(int argc, char* argv[]){
                 pthread_join(thread_retiro, NULL);
                 break;
             case 3: 
-                pthread_create(&thread_transferencia, NULL, realizar_transferencia, &usuario);
-                pthread_join(thread_transferencia, NULL);
+                int resultado;
+                resultado = pthread_create(&thread_transferencia, NULL, realizar_transferencia, &usuario);
+                resultado = pthread_join(thread_transferencia, NULL);
+
+                if (resultado == -2) {
+                    printf("\nLa cuenta no existe\n");
+                    sleep(4);
+                } else if (resultado == -3)
+                {
+                    printf("\nSaldo insuficiente\n");
+                    sleep(4);
+                } else {
+                    printf("\nOperacion realizada correctamente....\n");
+                    sleep(2);
+                }
                 break;
             case 4: 
                 consultar_saldo(&usuario);
@@ -160,14 +173,11 @@ void* realizar_transferencia(void* u){
 
     sem_wait(semaforo);
 
-    Usuario usuario;
+    Usuario Destino;
 
-    usuario = *(Usuario*)u;
+    Usuario* usuario = (Usuario*)u;
 
     Config configuracion = leer_configuracion("../Archivos_datos/config.txt");
-
-    char linea[100];
-    char linea_aux[100];
 
     //Datos de la transferencia
     int NumeroCuenta;
@@ -175,60 +185,65 @@ void* realizar_transferencia(void* u){
 
     //Leo el archivo para sacar el saldo
     FILE *file = fopen(configuracion.archivo_cuentas, "r+");
-    Usuario Aux;
-    while (fgets(linea, sizeof(linea), file)) {
-        // Leemos todos los datos de la linea
-        if (sscanf(linea, "%d,%49[^,],%f,%d", &Aux.numero_cuenta, Aux.titular, &Aux.saldo, &Aux.num_transacciones) == 4) {
-            // Verificar si el nombre y la contraseña coinciden
-            if (Aux.numero_cuenta == usuario.numero_cuenta) {
-                break;
-            }   
-        }
-    }
 
     printf("\nDima el numero de cuenta al que quieres hacer una transferencia: ");
     scanf("%d", &NumeroCuenta);
     printf("\nQue cantidad le quieres ingresar: ");
     scanf("%f", &Cantidad);
 
-    usuario.saldo -= Cantidad;
+    long posicion_origen = -1, posicion_destino = -1;
+    char linea[100];
+    Usuario Aux;
 
-    fseek(file, -strlen(linea_aux), SEEK_CUR);
-    fprintf(file,"%d,%s,%f,%d\n",usuario.numero_cuenta, usuario.titular, usuario.saldo, usuario.num_transacciones);
-    fclose(file);    
-
-    file = fopen(configuracion.archivo_cuentas, "r+");
+    // Buscar las cuentas de origen y destino en el archivo.
     while (fgets(linea, sizeof(linea), file)) {
-        // Leemos todos los datos de la linea
         if (sscanf(linea, "%d,%49[^,],%f,%d", &Aux.numero_cuenta, Aux.titular, &Aux.saldo, &Aux.num_transacciones) == 4) {
-            // Verificar si el nombre y la contraseña coinciden
-            if (Aux.numero_cuenta == NumeroCuenta) {
-                break;
-            }   
+            if (Aux.numero_cuenta == usuario->numero_cuenta) {
+                posicion_origen = ftell(file) - strlen(linea);
+            } else if (Aux.numero_cuenta == NumeroCuenta) {
+                Destino = Aux;
+                posicion_destino = ftell(file) - strlen(linea); // Guarda la posición de la línea.
+            }
         }
     }
 
-    Aux.saldo += Cantidad;
-    fseek(file, -strlen(linea_aux), SEEK_CUR);
-    fprintf(file,"%d,%s,%f,%d\n",Aux.numero_cuenta, Aux.titular, Aux.saldo, Aux.num_transacciones);
-    fclose(file);
+    // Verificar si se encontraron las cuentas.
+    if (posicion_origen == -1 || posicion_destino == -1) {
+        fclose(file);
+        return "-2"; // Una o ambas cuentas no existen.
+    }
 
-    file = fopen(configuracion.archivo_log, "a");
-    fprintf(file,"%d,%d,%f",usuario.numero_cuenta,Aux.numero_cuenta,Cantidad);
-    fclose(file);
+    // Verificar si la cuenta de origen tiene suficiente saldo.
+    if (usuario->saldo < Cantidad) {
+        fclose(file);
+        return "-3"; // Saldo insuficiente.
+    }
 
-    sem_post(semaforo);
-} 
+    // Actualizar los saldos y el número de transacciones.
+    usuario->saldo -= Cantidad;
+    usuario->num_transacciones++;
+    Destino.saldo += Cantidad;
+    Destino.num_transacciones++;
+
+    // Escribir los datos actualizados en el archivo.
+    fseek(file, posicion_origen, SEEK_SET);
+    fprintf(file, "%d,%s,%.2f,%d\n", usuario->numero_cuenta, usuario->titular, usuario->saldo, usuario->num_transacciones);
+
+    fseek(file, posicion_destino, SEEK_SET);
+    fprintf(file, "%d,%s,%.2f,%d\n", Destino.numero_cuenta, Destino.titular, Destino.saldo, Destino.num_transacciones);
+
+    fclose(file);
+    return 0; // Transferencia exitosa.
+}
+
 
 void* consultar_saldo(void* u){
 
     char confirmacion;
 
-    Usuario usuario;
-
-    usuario = *(Usuario*)u;
+    Usuario* usuario = (Usuario*)u;
     
-    printf("Tienes un saldo de %f\n", usuario.saldo);
+    printf("Tienes un saldo de %f\n", usuario->saldo);
     printf("¿Desea volver al menú?: ");
     scanf(" %c", &confirmacion);
     do {
@@ -246,20 +261,25 @@ Usuario AsignarUsuario(int NumeroCuenta) {
 
     char linea[100];    
 
+    char nombreArchivo[] = "../Archivos_datos/cuentas.dat";
+
     Config configuracion = leer_configuracion("../Archivos_datos/config.txt");
 
-    FILE *file = fopen(configuracion.archivo_cuentas, "r+");
-    Usuario usuario, Aux;
+    FILE *file = fopen(nombreArchivo, "r");
+    rewind(file);
+    Usuario usuario;
 
     while (fgets(linea, sizeof(linea), file)) {
-        // Leemos todos los datos de la linea
         if (sscanf(linea, "%d,%49[^,],%f,%d", &usuario.numero_cuenta, usuario.titular, &usuario.saldo, &usuario.num_transacciones) == 4) {
-            // Verificar si numero cuenta coinciden
             if (usuario.numero_cuenta == NumeroCuenta) {
+                printf("%f", usuario.saldo);
+                sleep(4);
                 fclose(file);
                 return usuario;
-            }   
+            }
         }
-    }   
+    } 
     fclose(file); 
+    printf("No se ha encontrado el usuario");
+    sleep(4);
 }

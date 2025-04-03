@@ -66,6 +66,7 @@ int main(){
 
 
 void menu(const char *nombreArchivo){
+    system("clear");
     int caso;
     printf("1. Login\n2. Registeer\n3. Salir\n");
     printf("Respuesta: ");
