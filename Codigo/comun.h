@@ -20,5 +20,9 @@ typedef struct Config {
 
 Config leer_configuracion(const char *ruta);
 
+void AgregarLog(const char *operacion);
+
+void* Estado_banco(void* arg);
+
 #endif
 

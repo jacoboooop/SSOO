@@ -15,12 +15,14 @@ void* consultar_saldo(void* u);
 Usuario AsignarUsuario(int NumeroCuenta);
 void* Estado_banco(void* arg);
 
+char mensaje[100];
+
 sem_t *semaforo;
 
 
 int main(int argc, char* argv[]){
 
-    semaforo = sem_open("/cuentas_sem", 0);
+    semaforo = sem_open("semaforo_cuentas", 0);
 
     int numero_cuenta = atoi(argv[1]); //guardo ncuenta para operaciones
 
@@ -32,8 +34,6 @@ int main(int argc, char* argv[]){
     Config configuracion = leer_configuracion("../Archivos_datos/config.txt");
 
     pthread_t thread_deposito, thread_retiro, thread_transferencia, thread_saldo;
-    
-    Usuario usuario = AsignarUsuario(numero_cuenta);
 
     int opcion;
     while(1){
@@ -44,16 +44,16 @@ int main(int argc, char* argv[]){
         //while(getchar()!='\n');
         switch (opcion) {
             case 1: 
-                pthread_create(&thread_deposito, NULL, realizar_deposito, &usuario);
+                pthread_create(&thread_deposito, NULL, realizar_deposito, &numero_cuenta);
                 pthread_join(thread_deposito, NULL); 
                 break;
             case 2: 
-                pthread_create(&thread_retiro, NULL, realizar_retiro, &usuario);
+                pthread_create(&thread_retiro, NULL, realizar_retiro, &numero_cuenta);
                 pthread_join(thread_retiro, NULL);
                 break;
             case 3: 
                 int resultado;
-                resultado = pthread_create(&thread_transferencia, NULL, realizar_transferencia, &usuario);
+                resultado = pthread_create(&thread_transferencia, NULL, realizar_transferencia, &numero_cuenta);
                 resultado = pthread_join(thread_transferencia, NULL);
 
                 if (resultado == -2) {
@@ -69,7 +69,7 @@ int main(int argc, char* argv[]){
                 }
                 break;
             case 4: 
-                consultar_saldo(&usuario);
+                consultar_saldo(&numero_cuenta);
                 break;
             case 5: 
                 exit(0);
@@ -77,33 +77,27 @@ int main(int argc, char* argv[]){
         }
     }   
     sem_close(semaforo);
-    hola carcola
+    sem_unlink("semaforo_cuentas");
+
 
     return 0;
 }
 
-// Cambiar funcion
-
 void* realizar_deposito(void* u){
 
+    AgregarLog("Se esta esperando a que el semaforo este disponible");
     sem_wait(semaforo);
 
-    Usuario usuario;
+    int NumeroUsuario;
 
-    usuario = *(Usuario*)u;
+    NumeroUsuario = *(int*)u;
+    Usuario usuario = AsignarUsuario(NumeroUsuario);
 
     Config configuracion = leer_configuracion("../Archivos_datos/config.txt");
-
-    float ingreso;
+    float deposito;
 
     char linea[100];
-    char linea_aux[100];
-    system("clear");
-    //Pido la cantidad a ingresae
-    printf("Va a realizar un deposito\n");
-    printf("\t¿Cuanto dinero quiere ingresar?: ");
-    scanf(" %f", &ingreso);
-
+    long linea_aux = -1;
 
     //Leo el archivo para sacar el saldo
     FILE *file = fopen(configuracion.archivo_cuentas, "r+");
@@ -113,35 +107,53 @@ void* realizar_deposito(void* u){
         if (sscanf(linea, "%d,%49[^,],%f,%d", &Aux.numero_cuenta, Aux.titular, &Aux.saldo, &Aux.num_transacciones) == 4) {
             // Verificar si el nombre y la contraseña coinciden
             if (Aux.numero_cuenta == usuario.numero_cuenta) {
+                linea_aux = ftell(file) - strlen(linea);
                 break;
             }   
         }
     }
-    printf("\n\tEl ingreso se ha realizado con exito.");
+
+    system("clear");
+    printf("%s tiene un saldo de %f\n", usuario.titular, usuario.saldo);
+    printf("\t¿Cuento dinero quiere depositar?: ");
+    scanf(" %f", &deposito);
+    usuario.saldo += deposito;
+    system("clear");
+    printf("El deposito se ha realizado con exito.");
     printf("\nSaldo actual: %f", usuario.saldo);
-    usuario.saldo += ingreso;
     printf("\nVolviendo al menu...");
     sleep(3);
-    //actualizo el archivo con el nuevo saldo
-    fseek(file, -strlen(linea_aux), SEEK_CUR);
-    fprintf(file,"%d,%s,%f,%d\n",usuario.numero_cuenta, usuario.titular, usuario.saldo, usuario.num_transacciones);
+    //actualizo el archivo
+    fseek(file, linea_aux, SEEK_SET);
+    fprintf(file, "%d,%s,%.2f,%d\n", usuario.numero_cuenta, usuario.titular, usuario.saldo, usuario.num_transacciones);
+    fclose(file);
+
+    file = fopen("../Archivos_datos/Transacciones.log", "a");
+    fprintf(file,"%d,%d,%f",usuario.numero_cuenta,usuario.numero_cuenta,deposito);
+    fclose(file);
+
+    snprintf(mensaje, sizeof(mensaje), "Se ha realizado un deposito de: %f", deposito);
+    AgregarLog(mensaje);
+
     sem_post(semaforo);
     system("clear");
 }
 
 void* realizar_retiro(void* u){
 
+    AgregarLog("Se esta esperando a que el semaforo este disponible");
     sem_wait(semaforo);
 
-    Usuario usuario;
+    int NumeroUsuario;
 
-    usuario = *(Usuario*)u;
+    NumeroUsuario = *(int*)u;
+    Usuario usuario = AsignarUsuario(NumeroUsuario);
 
     Config configuracion = leer_configuracion("../Archivos_datos/config.txt");
     float retiro;
 
     char linea[100];
-    char linea_aux[100];
+    long linea_aux = -1;
 
     //Leo el archivo para sacar el saldo
     FILE *file = fopen(configuracion.archivo_cuentas, "r+");
@@ -151,6 +163,7 @@ void* realizar_retiro(void* u){
         if (sscanf(linea, "%d,%49[^,],%f,%d", &Aux.numero_cuenta, Aux.titular, &Aux.saldo, &Aux.num_transacciones) == 4) {
             // Verificar si el nombre y la contraseña coinciden
             if (Aux.numero_cuenta == usuario.numero_cuenta) {
+                linea_aux = ftell(file) - strlen(linea);
                 break;
             }   
         }
@@ -161,30 +174,39 @@ void* realizar_retiro(void* u){
     printf("\t¿Cuento dinero quiere retirar?: ");
     scanf(" %f", &retiro);
     usuario.saldo -= retiro;
-    printf("\tEl retiro se ha realizado con exito.");
-    printf("Saldo actual: %f", usuario.saldo);
-    printf("Volviendo al menu...");
-    sleep(1);
+    system("clear");
+    printf("El retiro se ha realizado con exito.");
+    printf("\nSaldo actual: %f", usuario.saldo);
+    printf("\nVolviendo al menu...");
+    sleep(3);
     //actualizo el archivo
-    fseek(file, -strlen(linea_aux), SEEK_CUR);
-    fprintf(file,"%d,%s,%f,%d\n",usuario.numero_cuenta, usuario.titular, usuario.saldo, usuario.num_transacciones);
+    fseek(file, linea_aux, SEEK_SET);
+    fprintf(file, "%d,%s,%.2f,%d\n", usuario.numero_cuenta, usuario.titular, usuario.saldo, usuario.num_transacciones);
     fclose(file);
 
-    file = fopen(configuracion.archivo_log, "a");
+    file = fopen("../Archivos_datos/Transacciones.log", "a");
     fprintf(file,"%d,%d,%f",usuario.numero_cuenta,usuario.numero_cuenta,retiro);
     fclose(file);
 
     sem_post(semaforo);
+    system("clear");
+
+    snprintf(mensaje, sizeof(mensaje), "Se ha realizado un retiro de: %f", retiro);
+    AgregarLog(mensaje);
 
 }
 
 void* realizar_transferencia(void* u){
 
+    AgregarLog("Se esta esperando a que el semaforo este disponible");
     sem_wait(semaforo);
 
     Usuario Destino;
 
-    Usuario* usuario = (Usuario*)u;
+    int NumeroUsuario;
+
+    NumeroUsuario = *(int*)u;
+    Usuario usuario = AsignarUsuario(NumeroUsuario);
 
     Config configuracion = leer_configuracion("../Archivos_datos/config.txt");
 
@@ -207,7 +229,7 @@ void* realizar_transferencia(void* u){
     // Buscar las cuentas de origen y destino en el archivo.
     while (fgets(linea, sizeof(linea), file)) {
         if (sscanf(linea, "%d,%49[^,],%f,%d", &Aux.numero_cuenta, Aux.titular, &Aux.saldo, &Aux.num_transacciones) == 4) {
-            if (Aux.numero_cuenta == usuario->numero_cuenta) {
+            if (Aux.numero_cuenta == usuario.numero_cuenta) {
                 posicion_origen = ftell(file) - strlen(linea);
             } else if (Aux.numero_cuenta == NumeroCuenta) {
                 Destino = Aux;
@@ -223,36 +245,48 @@ void* realizar_transferencia(void* u){
     }
 
     // Verificar si la cuenta de origen tiene suficiente saldo.
-    if (usuario->saldo < Cantidad) {
+    if (usuario.saldo < Cantidad) {
         fclose(file);
         return "-3"; // Saldo insuficiente.
     }
 
     // Actualizar los saldos y el número de transacciones.
-    usuario->saldo -= Cantidad;
-    usuario->num_transacciones++;
+    usuario.saldo -= Cantidad;
+    usuario.num_transacciones++;
     Destino.saldo += Cantidad;
     Destino.num_transacciones++;
 
     // Escribir los datos actualizados en el archivo.
     fseek(file, posicion_origen, SEEK_SET);
-    fprintf(file, "%d,%s,%.2f,%d\n", usuario->numero_cuenta, usuario->titular, usuario->saldo, usuario->num_transacciones);
+    fprintf(file, "%d,%s,%.2f,%d\n", usuario.numero_cuenta, usuario.titular, usuario.saldo, usuario.num_transacciones);
 
     fseek(file, posicion_destino, SEEK_SET);
     fprintf(file, "%d,%s,%.2f,%d\n", Destino.numero_cuenta, Destino.titular, Destino.saldo, Destino.num_transacciones);
 
     fclose(file);
+
+    file = fopen("../Archivos_datos/Transacciones.log", "a");
+    fprintf(file,"%d,%d,%f",usuario.numero_cuenta,Aux.numero_cuenta,Cantidad);
+    fclose(file);
+
+    sem_post(semaforo);
+
+    snprintf(mensaje, sizeof(mensaje), "Se ha realizado una transferencia de: %f", Cantidad);
+    AgregarLog(mensaje);
+
     return 0; // Transferencia exitosa.
 }
-
 
 void* consultar_saldo(void* u){
 
     char confirmacion;
 
-    Usuario* usuario = (Usuario*)u;
+    int NumeroUsuario;
+
+    NumeroUsuario = *(int*)u;
+    Usuario usuario = AsignarUsuario(NumeroUsuario);
     system("clear");
-    printf("Tienes un saldo de %f\n", usuario->saldo);
+    printf("Tienes un saldo de %f\n", usuario.saldo);
     printf("¿Desea volver al menú?: ");
     scanf(" %c", &confirmacion);
     do {
@@ -264,6 +298,8 @@ void* consultar_saldo(void* u){
             printf("Opción no válida, vuelva a intentarlo.");
         }
     } while (confirmacion != 'S' && confirmacion != 's' && confirmacion != 'N' && confirmacion != 'n');
+
+    system("clear");
 }
 
 Usuario AsignarUsuario(int NumeroCuenta) {
@@ -274,6 +310,7 @@ Usuario AsignarUsuario(int NumeroCuenta) {
 
     Config configuracion = leer_configuracion("../Archivos_datos/config.txt");
 
+    AgregarLog("Se esta leyendo el archivo de usuarios");
     FILE *file = fopen(nombreArchivo, "r");
     Usuario usuario;
 
@@ -287,18 +324,4 @@ Usuario AsignarUsuario(int NumeroCuenta) {
     } 
     fclose(file); 
     printf("\nNo se ha encontrado el usuario\n");
-}
-
-void* Estado_banco(void* arg) {
-    pid_t pid_banco = *(pid_t *)arg;
-    char comando[200];
-    while(1){
-        if (kill(pid_banco, 0) == -1){
-            snprintf(comando, sizeof(comando), "kill -9 %d", getpid());
-            system(comando);
-        }
-        sleep(4);
-    }
-
-    return NULL;
 }

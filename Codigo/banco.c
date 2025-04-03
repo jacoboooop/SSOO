@@ -18,15 +18,15 @@ void init_cuentas(const char *nombre_archivo);
 void AgregarLog(const char *operacion);
 bool VerificarCuenta(char nombre[], int numero, const char *nombreArchivo);
 
-sem_t *semaforo;
-
 Config configuracion;
 
 Usuario usuario;
 
 int main(){
 
-    semaforo = sem_open("/cuentas_sem", O_CREAT, 0644, 1);
+    sem_t *semaforo;
+
+    semaforo = sem_open("semaforo_cuentas", O_CREAT, 0644, 1);
     system("clear");
 
     configuracion = leer_configuracion("../Archivos_datos/config.txt");
@@ -59,6 +59,9 @@ int main(){
 
     AgregarLog("Se ha iniciado el menu");
     menu(configuracion.archivo_cuentas);
+
+    sem_close(semaforo);
+    sem_unlink("semaforo_cuentas");
 
     return (0);
 
@@ -170,22 +173,8 @@ void RegistrarCuenta(const char *nombreArchivo, const char *nombre_input){
 
     FILE *Registro1 = fopen(nombreArchivo, "a");
 
-    fprintf(Registro1,"%d,%s,500,0\n",contador + 1,nombre_input);
+    fprintf(Registro1,"%d,%s,500,0\n",contador + 1001,nombre_input);
     fclose(Registro1);
-}
-
-void AgregarLog(const char *operacion) {
-
-    FILE *archivoLog = fopen(configuracion.archivo_log, "a");
-    
-    time_t t = time(NULL);
-    struct tm *tm_info = localtime(&t);
-    char hora_actual[20];
-    strftime(hora_actual, sizeof(hora_actual), "%Y-%m-%d %H:%M:%S", tm_info);
-    
-    fprintf(archivoLog, "%s ---- %s\n", hora_actual, operacion);
-    fclose(archivoLog);
-
 }
 
 bool VerificarCuenta(char nombre[], int numero, const char *nombreArchivo){

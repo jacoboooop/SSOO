@@ -35,3 +35,33 @@ Config leer_configuracion(const char *ruta){
     fclose(archivo);
     return config;
 }
+
+void AgregarLog(const char *operacion) {
+
+    Config configuracion = leer_configuracion("../Archivos_datos/config.txt");
+
+    FILE *archivoLog = fopen(configuracion.archivo_log, "a");
+    
+    time_t t = time(NULL);
+    struct tm *tm_info = localtime(&t);
+    char hora_actual[20];
+    strftime(hora_actual, sizeof(hora_actual), "%Y-%m-%d %H:%M:%S", tm_info);
+    
+    fprintf(archivoLog, "%s ---- %s\n", hora_actual, operacion);
+    fclose(archivoLog);
+
+}
+
+void* Estado_banco(void* arg) {
+    pid_t pid_banco = *(pid_t *)arg;
+    char comando[200];
+    while(1){
+        if (kill(pid_banco, 0) == -1){
+            snprintf(comando, sizeof(comando), "kill -9 %d", getpid());
+            system(comando);
+        }
+        sleep(4);
+    }
+
+    return NULL;
+}

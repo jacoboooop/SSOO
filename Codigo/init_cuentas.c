@@ -13,16 +13,14 @@ int main(){
 
     char nombre_archivo[] = "../Archivos_datos/cuentas.dat";
 
-    FILE *file = fopen(nombre_archivo, "a");
+    FILE *file = fopen(nombre_archivo, "w");
 
     struct Cuenta cuentas;
 
     for (int i = 1; i < 6; i++){
-        cuentas.numero_cuenta = i;
+        cuentas.numero_cuenta = i+1000;
         sprintf(cuentas.titular, "usuario%d", i);
-        cuentas.saldo = 500;
-        cuentas.num_transacciones = 0;
-        fprintf(file, "%d,%s,%f,%d\n", cuentas.numero_cuenta, cuentas.titular, cuentas.saldo, cuentas.num_transacciones);
+        fprintf(file, "%d,%s,500,0\n", cuentas.numero_cuenta, cuentas.titular);
     }
 
     fclose(file);
