@@ -22,6 +22,7 @@ int main(int argc, char* argv[]){
     semaforo = sem_open("/cuentas_sem", 0);
 
     int numero_cuenta = atoi(argv[1]); //guardo ncuenta para operaciones
+    printf("%d", numero_cuenta);
     Config configuracion = leer_configuracion("../Archivos_datos/config.txt");
 
     pthread_t thread_deposito, thread_retiro, thread_transferencia, thread_saldo;

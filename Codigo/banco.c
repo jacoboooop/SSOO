@@ -27,10 +27,9 @@ Usuario usuario;
 int main(){
 
     semaforo = sem_open("/cuentas_sem", O_CREAT, 0644, 1);
+    system("clear");
 
     configuracion = leer_configuracion("../Archivos_datos/config.txt");
-
-    menu(configuracion.archivo_cuentas);
 
     //*******************************inicializo el monitor***********************************
     int fd[2]; 
@@ -53,13 +52,14 @@ int main(){
     }
     else {
         //mensaje?
-        close(fd[1]);  //cierro escritura
-        wait(NULL);  //espero a que termine mointor
-        printf("Monitor finalizado.\n");
+        close(fd[1]); 
+        printf("Monitor Ejecutado...\n");
+        sleep(3);
     }
 
     AgregarLog("Se ha iniciado el menu");
-   
+    menu(configuracion.archivo_cuentas);
+
     return (0);
 
 }
@@ -83,21 +83,6 @@ void menu(const char *nombreArchivo){
             printf("\nNumeroCuenta: ");
             scanf("%d", &NumeroCuenta);
             if (VerificarCuenta(NombreUsuario, NumeroCuenta, nombreArchivo)) {
-                /*
-                int NumeroCuenta;
-                FILE *file = fopen(nombreArchivo, "r");
-                char linea[MAX_LINE_LENGTH];
-                Usuario usuario;
-                while (fgets(linea, sizeof(linea), file)) {
-                    // Leemos todos los datos de la linea
-                    if (sscanf(linea, "%d,%49[^,],%f,%d", &usuario.numero_cuenta, usuario.titular, &usuario.saldo, &usuario.num_transacciones) == 4) {
-                        // Verificar si el nombre y la contraseña coinciden
-                        if (strcmp(usuario.titular, NombreUsuario) == 0) {
-                            NumeroCuenta = usuario.numero_cuenta;
-                            fclose(file);
-                        }
-                    }
-                }*/
                 LoginCuenta(NumeroCuenta);
                 AgregarLog("Se ha hecho login");
             }

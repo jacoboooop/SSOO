@@ -6,16 +6,17 @@
 #include <fcntl.h>
 #include "comun.h"
 
-typedef struct Monitor
+typedef struct  Monitor
 {
     int Usuario;
     int Usuario2;
-    float Cantidad
+    float Cantidad;
 } Monitor;
+
 
 int main()
 {
-
+    
     Config configuracion = leer_configuracion("../Archivos_datos/config.txt");
     Monitor monitor;
 
