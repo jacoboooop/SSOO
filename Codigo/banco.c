@@ -131,6 +131,8 @@ void menu(const char *nombreArchivo){
 }
 
 void LoginCuenta(int numeroCuenta){
+    
+    pid_t pid_banco = getpid();
     pid_t pid2 = fork();
 
     if (pid2 < 0) {
@@ -140,7 +142,7 @@ void LoginCuenta(int numeroCuenta){
     else if (pid2 == 0) {
         sleep(1);
         char comando[250];
-        snprintf(comando, sizeof(comando), "./usuario %d", numeroCuenta);
+        snprintf(comando, sizeof(comando), "./usuario %d %d", numeroCuenta, pid_banco);
         execlp("gnome-terminal", "gnome-terminal", "--", "bash", "-c", comando, NULL);
         perror("Error en exec");
         exit(1);

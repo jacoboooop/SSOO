@@ -13,6 +13,7 @@ void* realizar_retiro(void* u);
 void* realizar_transferencia(void* u);
 void* consultar_saldo(void* u);
 Usuario AsignarUsuario(int NumeroCuenta);
+void* Estado_banco(void* arg);
 
 sem_t *semaforo;
 
@@ -23,8 +24,10 @@ int main(int argc, char* argv[]){
 
     int numero_cuenta = atoi(argv[1]); //guardo ncuenta para operaciones
 
-    printf("%d\n", numero_cuenta);
-    sleep(3);
+    pthread_t banco;
+    pid_t pid_banco = atoi(argv[2]);
+    pthread_create(&banco, NULL, Estado_banco, &pid_banco);
+
     
     Config configuracion = leer_configuracion("../Archivos_datos/config.txt");
 
@@ -151,10 +154,10 @@ void* realizar_retiro(void* u){
         }
     }
 
+    system("clear");
     printf("%s tiene un saldo de %f\n", usuario.titular, usuario.saldo);
     printf("\t¿Cuento dinero quiere retirar?: ");
-    scanf("%f", &retiro);
-    while(getchar()!='\n');
+    scanf(" %f", &retiro);
     usuario.saldo -= retiro;
     printf("\tEl retiro se ha realizado con exito.");
     printf("Saldo actual: %f", usuario.saldo);
@@ -275,7 +278,6 @@ Usuario AsignarUsuario(int NumeroCuenta) {
     while (fgets(linea, sizeof(linea), file) != NULL) {
         if (sscanf(linea, "%d,%49[^,],%f,%d", &usuario.numero_cuenta, usuario.titular, &usuario.saldo, &usuario.num_transacciones) == 4) {
             if (usuario.numero_cuenta == NumeroCuenta) {
-                printf("%f", usuario.saldo);
                 fclose(file);
                 return usuario;
             }
@@ -283,4 +285,18 @@ Usuario AsignarUsuario(int NumeroCuenta) {
     } 
     fclose(file); 
     printf("\nNo se ha encontrado el usuario\n");
+}
+
+void* Estado_banco(void* arg) {
+    pid_t pid_banco = *(pid_t *)arg;
+    char comando[200];
+    while(1){
+        if (kill(pid_banco, 0) == -1){
+            snprintf(comando, sizeof(comando), "kill -9 %d", getpid());
+            system(comando);
+        }
+        sleep(4);
+    }
+
+    return NULL;
 }
