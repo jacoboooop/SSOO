@@ -37,7 +37,7 @@ int main(int argc, char* argv[]){
 
     int opcion;
     while(1){
-
+        system("clear");
         printf("1. Depósito\n2. Retiro\n3. Transferencia\n4. Consultar saldo\n5. Salir\n");
         printf("Que operación desea relaizar: ");
         scanf("%d", &opcion);
@@ -97,7 +97,7 @@ void* realizar_deposito(void* u){
 
     char linea[100];
     char linea_aux[100];
-
+    system("clear");
     //Pido la cantidad a ingresae
     printf("Va a realizar un deposito\n");
     printf("\t¿Cuanto dinero quiere ingresar?: ");
@@ -116,15 +116,16 @@ void* realizar_deposito(void* u){
             }   
         }
     }
-    printf("\tEl ingreso se ha realizado con exito.");
-    printf("Saldo actual: %f", usuario.saldo);
+    printf("\n\tEl ingreso se ha realizado con exito.");
+    printf("\nSaldo actual: %f", usuario.saldo);
     usuario.saldo += ingreso;
-    printf("Volviendo al menu...");
-    sleep(1);
+    printf("\nVolviendo al menu...");
+    sleep(3);
     //actualizo el archivo con el nuevo saldo
     fseek(file, -strlen(linea_aux), SEEK_CUR);
     fprintf(file,"%d,%s,%f,%d\n",usuario.numero_cuenta, usuario.titular, usuario.saldo, usuario.num_transacciones);
     sem_post(semaforo);
+    system("clear");
 }
 
 void* realizar_retiro(void* u){
@@ -249,7 +250,7 @@ void* consultar_saldo(void* u){
     char confirmacion;
 
     Usuario* usuario = (Usuario*)u;
-    
+    system("clear");
     printf("Tienes un saldo de %f\n", usuario->saldo);
     printf("¿Desea volver al menú?: ");
     scanf(" %c", &confirmacion);
